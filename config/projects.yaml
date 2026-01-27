@@ -5,4 +5,13 @@ projects:
     priority: high
     status: active
 
-current_project: sample_project
+  - id: pitacas
+    name: "ピタキャス - タレントキャスティング支援AI"
+    path: "/mnt/c/tools/pitacas"
+    priority: high
+    status: active
+    notion_url: "https://www.notion.so/AI-2dcae6e4037981c98634fdaad21f0daa"
+    description: |
+      キャスティング業界向けAI×SaaSプラットフォーム。
+      タレント検索・リスト作成の自動化により、従来半日かかっていた作業を10分で提出物化。
+      キラーフィーチャー: Surprise-but-Right（意外なのに納得）提案
