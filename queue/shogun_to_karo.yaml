@@ -1,1 +1,41 @@
-queue: []
+queue:
+  - id: cmd_004
+    timestamp: "2026-01-29T10:45:00"
+    command: "レビュー行番号検証の仕組み構築"
+    project: multi-agent-shogun
+    priority: high
+    status: pending
+    details:
+      description: |
+        レビュー結果で行番号を記載する際、実際のファイルと一致しているか
+        自動検証する仕組みを構築せよ。
+
+      requirements:
+        - name: "line-number-validator"
+          type: script
+          language: python or bash
+          functionality:
+            - レビューファイル（YAML or Markdown）から行番号と引用テキストを抽出
+            - 対象ファイルの該当行と照合
+            - 不一致があれば警告を出力
+            - 正確な行番号を提案
+
+        - name: "review-template"
+          type: template
+          functionality:
+            - レビュー時に使用するテンプレート
+            - 行番号と引用テキストを必ずセットで記載するルール
+            - 検証スクリプトが処理しやすい形式
+
+      output_location: "/Users/manishi/Documents/dev/personal/multi-agent-shogun/tools/"
+
+      acceptance_criteria:
+        - 行番号と引用テキストの不一致を検出できる
+        - 正しい行番号を提案できる
+        - 複数ファイルのレビューに対応
+        - 日本語テキストに対応
+
+    notes:
+      - "将軍が手動で行番号確認するのは非効率"
+      - "今後のレビュー作業で必ず使用する"
+      - "シンプルな実装を優先"
