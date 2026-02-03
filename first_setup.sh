@@ -277,23 +277,23 @@ else
 fi
 
 # ============================================================
-# STEP 5: Claude Code CLI チェック
+# STEP 5: Codex CLI チェック
 # ============================================================
-log_step "STEP 5: Claude Code CLI チェック"
+log_step "STEP 5: Codex CLI チェック"
 
-if command -v claude &> /dev/null; then
+if command -v codex &> /dev/null; then
     # バージョン取得を試みる
-    CLAUDE_VERSION=$(claude --version 2>/dev/null || echo "unknown")
-    log_success "Claude Code CLI がインストール済みです"
-    log_info "バージョン: $CLAUDE_VERSION"
-    RESULTS+=("Claude Code CLI: OK")
+    CODEX_VERSION=$(codex --version 2>/dev/null || echo "unknown")
+    log_success "Codex CLI がインストール済みです"
+    log_info "バージョン: $CODEX_VERSION"
+    RESULTS+=("Codex CLI: OK")
 else
-    log_warn "Claude Code CLI がインストールされていません"
+    log_warn "Codex CLI がインストールされていません"
     echo ""
 
     if command -v npm &> /dev/null; then
         echo "  インストールコマンド:"
-        echo "     npm install -g @anthropic-ai/claude-code"
+        echo "     npm install -g @openai/codex"
         echo ""
         if [ ! -t 0 ]; then
             REPLY="Y"
@@ -302,25 +302,25 @@ else
         fi
         REPLY=${REPLY:-Y}
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            log_info "Claude Code CLI をインストール中..."
-            npm install -g @anthropic-ai/claude-code
+            log_info "Codex CLI をインストール中..."
+            npm install -g @openai/codex
 
-            if command -v claude &> /dev/null; then
-                log_success "Claude Code CLI インストール完了"
-                RESULTS+=("Claude Code CLI: インストール完了")
+            if command -v codex &> /dev/null; then
+                log_success "Codex CLI インストール完了"
+                RESULTS+=("Codex CLI: インストール完了")
             else
                 log_error "インストールに失敗しました。パスを確認してください"
-                RESULTS+=("Claude Code CLI: インストール失敗")
+                RESULTS+=("Codex CLI: インストール失敗")
                 HAS_ERROR=true
             fi
         else
             log_warn "インストールをスキップしました"
-            RESULTS+=("Claude Code CLI: 未インストール (スキップ)")
+            RESULTS+=("Codex CLI: 未インストール (スキップ)")
             HAS_ERROR=true
         fi
     else
         echo "  npm がインストールされていないため、先に Node.js をインストールしてください"
-        RESULTS+=("Claude Code CLI: 未インストール (npm必要)")
+        RESULTS+=("Codex CLI: 未インストール (npm必要)")
         HAS_ERROR=true
     fi
 fi
@@ -390,7 +390,7 @@ shell: bash
 # スキル設定
 skill:
   # スキル保存先（スキル名に shogun- プレフィックスを付けて保存）
-  save_path: "~/.claude/skills/"
+  save_path: "~/.codex/skills/"
 
   # ローカルスキル保存先（このプロジェクト専用）
   local_path: "$SCRIPT_DIR/skills/"
@@ -633,15 +633,15 @@ fi
 # ============================================================
 log_step "STEP 11: Memory MCP セットアップ"
 
-if command -v claude &> /dev/null; then
+if command -v codex &> /dev/null; then
     # Memory MCP が既に設定済みか確認
-    if claude mcp list 2>/dev/null | grep -q "memory"; then
+    if codex mcp list 2>/dev/null | grep -q "memory"; then
         log_info "Memory MCP は既に設定済みです"
         RESULTS+=("Memory MCP: OK (設定済み)")
     else
         log_info "Memory MCP を設定中..."
-        if claude mcp add memory \
-            -e MEMORY_FILE_PATH="$SCRIPT_DIR/memory/shogun_memory.jsonl" \
+        if codex mcp add memory \
+            --env MEMORY_FILE_PATH="$SCRIPT_DIR/memory/shogun_memory.jsonl" \
             -- npx -y @modelcontextprotocol/server-memory 2>/dev/null; then
             log_success "Memory MCP 設定完了"
             RESULTS+=("Memory MCP: 設定完了")
@@ -651,8 +651,8 @@ if command -v claude &> /dev/null; then
         fi
     fi
 else
-    log_warn "claude コマンドが見つからないため Memory MCP 設定をスキップ"
-    RESULTS+=("Memory MCP: スキップ (claude未インストール)")
+    log_warn "codex コマンドが見つからないため Memory MCP 設定をスキップ"
+    RESULTS+=("Memory MCP: スキップ (codex未インストール)")
 fi
 
 # ============================================================
@@ -698,7 +698,7 @@ echo "  出陣（全エージェント起動）:"
 echo "     ./shutsujin_departure.sh"
 echo ""
 echo "  オプション:"
-echo "     ./shutsujin_departure.sh -s            # セットアップのみ（Claude手動起動）"
+echo "     ./shutsujin_departure.sh -s            # セットアップのみ（Codex手動起動）"
 echo "     ./shutsujin_departure.sh -t            # Windows Terminalタブ展開"
 echo "     ./shutsujin_departure.sh -shell bash   # bash用プロンプトで起動"
 echo "     ./shutsujin_departure.sh -shell zsh    # zsh用プロンプトで起動"

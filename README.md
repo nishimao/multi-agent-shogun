@@ -4,11 +4,11 @@
 
 **Command your AI army like a feudal warlord.**
 
-Run 8 Claude Code agents in parallel — orchestrated through a samurai-inspired hierarchy with zero coordination overhead.
+Run 8 Codex CLI agents in parallel — orchestrated through a samurai-inspired hierarchy with zero coordination overhead.
 
 [![GitHub Stars](https://img.shields.io/github/stars/yohey-w/multi-agent-shogun?style=social)](https://github.com/yohey-w/multi-agent-shogun)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Claude Code](https://img.shields.io/badge/Built_for-Claude_Code-blueviolet)](https://code.claude.com)
+[![Codex CLI](https://img.shields.io/badge/Built_for-Codex-black)](https://openai.com/codex)
 [![Shell](https://img.shields.io/badge/Shell%2FBash-100%25-green)]()
 
 [English](README.md) | [日本語](README_ja.md)
@@ -23,7 +23,7 @@ Run 8 Claude Code agents in parallel — orchestrated through a samurai-inspired
 
 ---
 
-Give a single command. The **Shogun** (general) delegates to the **Karo** (steward), who distributes work across up to **8 Ashigaru** (foot soldiers) — all running as independent Claude Code processes in tmux. Communication flows through YAML files and tmux `send-keys`, meaning **zero extra API calls** for agent coordination.
+Give a single command. The **Shogun** (general) delegates to the **Karo** (steward), who distributes work across up to **8 Ashigaru** (foot soldiers) — all running as independent Codex CLI processes in tmux. Communication flows through YAML files and tmux `send-keys`, meaning **zero extra API calls** for agent coordination.
 
 <!-- TODO: add demo.gif — record with asciinema or vhs -->
 
@@ -31,14 +31,14 @@ Give a single command. The **Shogun** (general) delegates to the **Karo** (stewa
 
 Most multi-agent frameworks burn API tokens on coordination. Shogun doesn't.
 
-| | Claude Code `Task` tool | LangGraph | CrewAI | **multi-agent-shogun** |
+| | Codex CLI | LangGraph | CrewAI | **multi-agent-shogun** |
 |---|---|---|---|---|
 | **Architecture** | Subagents inside one process | Graph-based state machine | Role-based agents | Feudal hierarchy via tmux |
 | **Parallelism** | Sequential (one at a time) | Parallel nodes (v0.2+) | Limited | **8 independent agents** |
 | **Coordination cost** | API calls per Task | API + infra (Postgres/Redis) | API + CrewAI platform | **Zero** (YAML + tmux) |
-| **Observability** | Claude logs only | LangSmith integration | OpenTelemetry | **Live tmux panes** + dashboard |
+| **Observability** | Codex logs only | LangSmith integration | OpenTelemetry | **Live tmux panes** + dashboard |
 | **Skill discovery** | None | None | None | **Bottom-up auto-proposal** |
-| **Setup** | Built into Claude Code | Heavy (infra required) | pip install | Shell scripts |
+| **Setup** | Built into Codex CLI | Heavy (infra required) | pip install | Shell scripts |
 
 ### What makes this different
 
@@ -66,7 +66,7 @@ Reports in YAML:  skill_candidate:
                      name: "api-endpoint-scaffold"
                      reason: "Same REST scaffold pattern used in 3 projects"
     ↓
-Appears in dashboard.md → You approve → Skill created in .claude/commands/
+Appears in dashboard.md → You approve → Skill created as a local command
     ↓
 Any agent can now invoke /api-endpoint-scaffold
 ```
@@ -110,7 +110,7 @@ Skills grow organically from real work — not from a predefined template librar
 | Memory MCP | Preferences, rules, cross-project knowledge | Everything |
 | Project files | `config/projects.yaml`, `context/*.md` | Everything |
 | YAML Queue | Tasks, reports (source of truth) | Everything |
-| Session | `CLAUDE.md`, instructions | `/clear` wipes it |
+| Session | `AGENTS.md`, instructions | `/clear` wipes it |
 
 After `/clear`, an agent recovers in **~2,000 tokens** by reading Memory MCP + its task YAML. No expensive re-prompting.
 
@@ -120,17 +120,17 @@ After `/clear`, an agent recovers in **~2,000 tokens** by reading Memory MCP + i
 
 Agents can be deployed in different **formations** (陣形 / *jindate*) depending on the task:
 
-| Formation | Ashigaru 1–4 | Ashigaru 5–8 | Best for |
-|-----------|-------------|-------------|----------|
-| **Normal** (default) | Sonnet | Opus | Everyday tasks — cost-efficient |
-| **Battle** (`-k` flag) | Opus | Opus | Critical tasks — maximum capability |
+| Formation | Karo | Ashigaru 1–8 | Best for |
+|-----------|------|-------------|----------|
+| **Normal** (default) | auto-edit | auto-edit | Everyday tasks — balanced |
+| **Battle** (`-k` flag) | full-auto | full-auto | Critical tasks — maximum speed |
 
 ```bash
 ./shutsujin_departure.sh          # Normal formation
-./shutsujin_departure.sh -k       # Battle formation (all Opus)
+./shutsujin_departure.sh -k       # Battle formation (all full-auto)
 ```
 
-The Karo can also promote individual Ashigaru mid-session with `/model opus` when a specific task demands it.
+You can switch models mid-session with `/model` when a specific task demands it.
 
 ---
 
@@ -147,7 +147,7 @@ git clone https://github.com/yohey-w/multi-agent-shogun.git C:\tools\multi-agent
 
 # 3. In Ubuntu terminal:
 cd /mnt/c/tools/multi-agent-shogun
-./first_setup.sh          # One-time: installs tmux, Node.js, Claude Code CLI
+./first_setup.sh          # One-time: installs tmux, Node.js, Codex CLI
 ./shutsujin_departure.sh  # Deploy your army
 ```
 
@@ -253,29 +253,37 @@ language: ja   # Samurai Japanese only
 language: en   # Samurai Japanese + English translation
 ```
 
-### Model assignment
+### Approval modes
 
-| Agent | Default Model | Thinking |
-|-------|--------------|----------|
-| Shogun | Opus | Disabled (delegation doesn't need deep reasoning) |
-| Karo | Opus | Enabled |
-| Ashigaru 1–4 | Sonnet | Enabled |
-| Ashigaru 5–8 | Opus | Enabled |
+| Agent | Default Mode | Rationale |
+|-------|--------------|-----------|
+| Shogun | suggest | Human is the final approver |
+| Karo | auto-edit | Balanced speed and safety |
+| Ashigaru 1–8 | auto-edit | Daily execution |
+
+### Default model assignment (Codex)
+
+| Agent | Default Model |
+|-------|---------------|
+| Shogun | `gpt-5.1-codex-mini` |
+| Karo | `gpt-5.2-codex` |
+| Ashigaru 1–4 | `gpt-5.1-codex-mini` |
+| Ashigaru 5–8 | `gpt-5.2-codex` |
 
 ### MCP servers
 
 ```bash
 # Memory (auto-configured by first_setup.sh)
-claude mcp add memory -e MEMORY_FILE_PATH="$PWD/memory/shogun_memory.jsonl" -- npx -y @modelcontextprotocol/server-memory
+codex mcp add memory --env MEMORY_FILE_PATH="$PWD/memory/shogun_memory.jsonl" -- npx -y @modelcontextprotocol/server-memory
 
 # Notion
-claude mcp add notion -e NOTION_TOKEN=your_token -- npx -y @notionhq/notion-mcp-server
+codex mcp add notion --env NOTION_TOKEN=your_token -- npx -y @notionhq/notion-mcp-server
 
 # GitHub
-claude mcp add github -e GITHUB_PERSONAL_ACCESS_TOKEN=your_pat -- npx -y @modelcontextprotocol/server-github
+codex mcp add github --env GITHUB_PERSONAL_ACCESS_TOKEN=your_pat -- npx -y @modelcontextprotocol/server-github
 
 # Playwright (browser automation)
-claude mcp add playwright -- npx @playwright/mcp@latest
+codex mcp add playwright -- npx @playwright/mcp@latest
 ```
 
 ### Screenshot integration
@@ -314,7 +322,7 @@ multi-agent-shogun/
 │
 ├── memory/                    # Memory MCP persistent storage
 ├── dashboard.md               # Human-readable status board
-└── CLAUDE.md                  # System instructions (auto-loaded)
+└── AGENTS.md                  # System instructions (auto-loaded)
 ```
 
 ---
@@ -324,7 +332,7 @@ multi-agent-shogun/
 <details>
 <summary><b>Agents asking for permissions?</b></summary>
 
-Agents should start with `--dangerously-skip-permissions`. This is handled automatically by `shutsujin_departure.sh`.
+Check the approval mode (e.g. `--auto-edit`, `--full-auto`, or `/approvals`). This is handled automatically by `shutsujin_departure.sh`.
 
 </details>
 
@@ -346,10 +354,10 @@ Don't use `css`/`csm` aliases inside an existing tmux session (causes nesting). 
 
 ```bash
 # From the crashed pane:
-claude --model opus --dangerously-skip-permissions
+codex --auto-edit
 
 # Or from another pane:
-tmux respawn-pane -t shogun:0.0 -k 'claude --model opus --dangerously-skip-permissions'
+tmux respawn-pane -t shogun:0.0 -k 'codex --auto-edit'
 ```
 
 </details>

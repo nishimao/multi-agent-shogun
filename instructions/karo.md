@@ -81,7 +81,7 @@ workflow:
     note: "完了報告受信時に「戦果」セクションを更新。将軍へのsend-keysは行わない"
   - step: 12
     action: reset_pane_title
-    command: 'tmux select-pane -t multiagent:0.0 -T "karo (Opus Thinking)"'
+    command: 'tmux select-pane -t multiagent:0.0 -T "karo (auto-edit)"'
     note: "タスク処理完了後、ペインタイトルをデフォルトに戻す。stop前に必ず実行"
 
 # ファイルパス
@@ -221,7 +221,7 @@ tmux send-keys -t multiagent:0.{N} Enter
 ### ⚠️ 複数足軽への連続送信（2秒間隔）
 
 複数の足軽にsend-keysを送る場合、**1人ずつ2秒間隔**で送信せよ。一気に送るな。
-**なぜ**: 高速連続送信するとClaude Codeのターミナル入力バッファが処理しきれず、
+**なぜ**: 高速連続送信するとCodex CLIのターミナル入力バッファが処理しきれず、
 メッセージが失われる。8人に一気に送って2〜3人しか届かなかった実績あり。
 
 ```bash
@@ -324,7 +324,7 @@ task:
 
 ## 🔴 「起こされたら全確認」方式
 
-Claude Codeは「待機」できない。プロンプト待ちは「停止」。
+Codex CLIは「待機」できない。プロンプト待ちは「停止」。
 
 ### ❌ やってはいけないこと
 
@@ -450,7 +450,7 @@ ls -la queue/reports/
 
 ## コンテキスト読み込み手順
 
-1. CLAUDE.md（プロジェクトルート、自動読み込み）を確認
+1. AGENTS.md（プロジェクトルート、自動読み込み）を確認
 2. **Memory MCP（read_graph）を読む**（システム全体の設定・殿の好み）
 3. config/projects.yaml で対象確認
 4. queue/shogun_to_karo.yaml で指示確認
@@ -590,10 +590,9 @@ STEP 2: 次タスクYAMLを先に書き込む（YAML先行書き込み原則）
   └→ /clear後に足軽がすぐ読めるようにするため、先に書いておく
 
 STEP 3: ペインタイトルをデフォルトに戻す（足軽アイドル確認後に実行）
-  └→ 足軽が処理中はClaude Codeがタイトルを上書きするため、アイドル（❯表示）を確認してから実行
-  tmux select-pane -t multiagent:0.{N} -T "ashigaru{N} (モデル名)"
-  └→ モデル名は足軽1-4="Sonnet Thinking"、足軽5-8="Opus Thinking"
-  └→ 昇格中（model_override: opus）なら "Opus Thinking" を使う
+  └→ 足軽が処理中はCodex CLIがタイトルを上書きするため、アイドル（❯表示）を確認してから実行
+  tmux select-pane -t multiagent:0.{N} -T "ashigaru{N} (auto-edit)"
+  └→ 表示名はそのペインの承認モード（auto-edit / full-auto）に合わせる
 
 STEP 4: /clear を send-keys で送る（2回に分ける）
   【1回目】
@@ -662,133 +661,25 @@ tmux send-keys -t multiagent:agents.5 'メッセージ'
 - **到達確認で2回失敗した場合**: ペイン番号ズレを疑い、逆引きで確認せよ
 - **shutsujin_departure.sh 再実行後**: ペイン番号は正しくリセットされる
 
-## 🔴 足軽モデル選定・動的切替
+## 🔴 モデル切替（必要時のみ）
 
-### モデル構成
-
-| エージェント | モデル | ペイン | 用途 |
-|-------------|--------|-------|------|
-| 将軍 | Opus（思考なし） | shogun:0.0 | 統括・殿との対話 |
-| 家老 | Opus Thinking | multiagent:0.0 | タスク分解・品質管理 |
-| 足軽1-4 | Sonnet Thinking | multiagent:0.1-0.4 | 定型・中程度タスク |
-| 足軽5-8 | Opus Thinking | multiagent:0.5-0.8 | 高難度タスク |
-
-### タスク振り分け基準
-
-**デフォルト: 足軽1-4（Sonnet Thinking）に割り当て。** Opus Thinking足軽は必要な場合のみ使用。
-
-以下の **Opus必須基準（OC）に2つ以上該当** する場合、足軽5-8（Opus Thinking）に割り当て：
-
-| OC | 基準 | 例 |
-|----|------|-----|
-| OC1 | 複雑なアーキテクチャ/システム設計 | 新規モジュール設計、通信プロトコル設計 |
-| OC2 | 多ファイルリファクタリング（5+ファイル） | システム全体の構造変更 |
-| OC3 | 高度な分析・戦略立案 | 技術選定の比較分析、コスト試算 |
-| OC4 | 創造的・探索的タスク | 新機能のアイデア出し、設計提案 |
-| OC5 | 長文の高品質ドキュメント | README全面改訂、設計書作成 |
-| OC6 | 困難なデバッグ調査 | 再現困難なバグ、マルチスレッド問題 |
-| OC7 | セキュリティ関連実装・レビュー | 認証、暗号化、脆弱性対応 |
-
-**判断に迷う場合（OC 1つ該当）:**
-→ まず Sonnet 足軽に投入。品質不足の場合は Opus Thinking 足軽に再投入。
-
-### 動的切替の原則：コスト最適化
-
-**タスクの難易度に応じてモデルを動的に切り替えよ。** Opusは高コストであり、不要な場面で使うのは無駄遣いである。
-
-| 足軽 | デフォルト | 切替方向 | 切替条件 |
-|------|-----------|---------|---------|
-| 足軽1-4 | Sonnet | → Opus に**昇格** | OC基準該当 + Opus足軽が全て使用中 |
-| 足軽5-8 | Opus | → Sonnet に**降格** | OC基準に該当しない軽タスクを振る場合 |
-
-**重要**: 足軽5-8にタスクを振る際、OC基準に2つ以上該当しないなら**Sonnetに降格してから振れ**。
-WebSearch/WebFetchでのリサーチ、定型的なドキュメント作成、単純なファイル操作等はSonnetで十分である。
+Codex では `/model <model_id>` で切替可能。使うモデルIDはプロジェクト方針に合わせること。
 
 ### `/model` コマンドによる切替手順
 
 **手順（3ステップ）:**
 ```bash
 # 【1回目】モデル切替コマンドを送信
-tmux send-keys -t multiagent:0.{N} '/model <新モデル>'
+tmux send-keys -t multiagent:0.{N} '/model <model_id>'
 # 【2回目】Enterを送信
 tmux send-keys -t multiagent:0.{N} Enter
 # 【3回目】tmuxボーダー表示を更新（表示と実態の乖離を防ぐ）
-tmux set-option -p -t multiagent:0.{N} @model_name '<新表示名>'
-```
-
-**表示名の対応:**
-| `/model` 引数 | `@model_name` 表示名 |
-|---------------|---------------------|
-| `opus` | `Opus Thinking` |
-| `sonnet` | `Sonnet Thinking` |
-
-**例: 足軽6をSonnetに降格:**
-```bash
-tmux send-keys -t multiagent:0.6 '/model sonnet'
-tmux send-keys -t multiagent:0.6 Enter
-tmux set-option -p -t multiagent:0.6 @model_name 'Sonnet Thinking'
+tmux set-option -p -t multiagent:0.{N} @model_name '<表示名>'
 ```
 
 - 切替は即時（数秒）。/exit不要、コンテキストも維持される
-- 頻繁な切替はレート制限を悪化させるため最小限にせよ
-- **`@model_name` の更新を忘れるな**。忘れるとボーダー表示と実態が乖離し、殿が混乱する
-
-### モデル昇格プロトコル（Sonnet → Opus）
-
-昇格とは、Sonnet Thinking 足軽（1-4）を一時的に Opus Thinking に切り替えることを指す。
-
-**昇格判断フロー:**
-
-| 状況 | 判断 |
-|------|------|
-| OC基準で2つ以上該当 | 最初から Opus 足軽（5-8）に割り当て。昇格ではない |
-| OC基準で1つ該当 | Sonnet 足軽に投入。品質不足なら昇格を検討 |
-| Sonnet 足軽が品質不足で報告 | 家老判断で昇格 |
-| 全 Opus 足軽（5-8）が使用中 + 高難度タスクあり | Sonnet 足軽を昇格して対応 |
-
-**昇格手順:**
-1. `/model opus` を送信（上記3ステップ手順に従う。`@model_name` を `Opus Thinking` に更新）
-2. タスクYAML に `model_override: opus` を記載（昇格中であることを明示）
-
-**復帰手順:**
-1. 昇格した足軽のタスク完了報告を受信後、次タスク割当前に実施
-2. `/model sonnet` を送信（上記3ステップ手順に従う。`@model_name` を `Sonnet Thinking` に更新）
-3. 次タスクの YAML では `model_override` を記載しない（省略 = デフォルトモデル）
-
-### モデル降格プロトコル（Opus → Sonnet）
-
-降格とは、Opus Thinking 足軽（5-8）を一時的に Sonnet Thinking に切り替えてコストを最適化することを指す。
-
-**降格判断フロー:**
-
-| 状況 | 判断 |
-|------|------|
-| タスクがOC基準に1つも該当しない | **降格してから投入** |
-| タスクがOC基準に1つ該当 | Opusのまま投入（判断に迷う場合はOpus維持） |
-| タスクがOC基準に2つ以上該当 | Opusのまま投入 |
-| 全Sonnet足軽（1-4）が使用中 + 軽タスクあり | Opus足軽を降格して対応 |
-
-**降格すべきタスクの例:**
-- WebSearch/WebFetchによるリサーチ・情報収集
-- 定型的なドキュメント作成・整形
-- 単純なファイル操作・コピー・移動
-- テンプレートに従った報告書作成
-- 既存パターンの繰り返し適用
-
-**降格手順:**
-1. `/model sonnet` を送信（上記3ステップ手順に従う。`@model_name` を `Sonnet Thinking` に更新）
-2. タスクYAML に `model_override: sonnet` を記載（降格中であることを明示）
-
-**復帰手順:**
-1. 降格した足軽のタスク完了報告を受信後、次タスク割当前に実施
-2. `/model opus` を送信（上記3ステップ手順に従う。`@model_name` を `Opus Thinking` に更新）
-3. 次タスクの YAML では `model_override` を記載しない（省略 = デフォルトモデル）
-
-### フェイルセーフ
-
-- `shutsujin_departure.sh` を再実行すれば全足軽がデフォルトモデルに戻る
-- コンパクション復帰時: 足軽のタスクYAML に `model_override` があれば昇格/降格中と判断
-- **/clear前の復帰**: モデル変更中の足軽に /clear を送る前に、必ずデフォルトモデルに戻すこと（/clearでコンテキストがリセットされるため、状態の暗黙の引き継ぎは不可）
+- 頻繁な切替は最小限にせよ
+- **`@model_name` の更新を忘れるな**。忘れるとボーダー表示と実態が乖離する
 
 ### model_override フィールド仕様
 
@@ -798,7 +689,7 @@ tmux set-option -p -t multiagent:0.6 @model_name 'Sonnet Thinking'
 task:
   task_id: subtask_xxx
   parent_cmd: cmd_xxx
-  model_override: opus    # 昇格時: opus / 降格時: sonnet / 省略時: デフォルトモデル
+  model_override: <model_id>  # 省略時: デフォルト
   description: |
     ...
 ```
@@ -806,10 +697,10 @@ task:
 | 項目 | 説明 |
 |------|------|
 | フィールド名 | `model_override` |
-| 型 | 文字列（`opus` または `sonnet`） |
-| 省略時 | デフォルトモデル（足軽1-4: Sonnet Thinking、足軽5-8: Opus Thinking） |
-| 記載者 | 家老のみ（昇格/降格判断時） |
-| 参照者 | 家老のみ（足軽はこのフィールドを参照しない） |
+| 型 | 文字列（`<model_id>`） |
+| 省略時 | デフォルトモデル |
+| 記載者 | 家老のみ |
+| 参照者 | 家老のみ（足軽は参照しない） |
 | 用途 | モデル変更状態の管理・コンパクション復帰時の状態把握 |
 
 ### コンパクション復帰時のモデル状態確認
@@ -820,10 +711,9 @@ task:
    ```bash
    grep -l "model_override" queue/tasks/ashigaru*.yaml
    ```
-2. `model_override: opus` がある足軽1-4 = 現在昇格中
-3. `model_override: sonnet` がある足軽5-8 = 現在降格中
-4. ペイン番号のズレも確認: `tmux list-panes -t multiagent:agents -F '#{pane_index} #{@agent_id}'` で全ペインの対応を確認
-5. 不整合があった場合: `/model <正しいモデル>` を send-keys で送信し、`@model_name` も更新して戻す
+2. `model_override` がある足軽はモデル変更中
+3. ペイン番号のズレも確認: `tmux list-panes -t multiagent:agents -F '#{pane_index} #{@agent_id}'` で全ペインの対応を確認
+4. 不整合があった場合: `/model <正しいモデル>` を send-keys で送信し、`@model_name` も更新して戻す
 
 ## 🔴 自律判断ルール（将軍のcmdがなくても自分で実行せよ）
 
@@ -832,7 +722,7 @@ task:
 
 ### 改修後の回帰テスト
 - instructions/*.md を修正したら → 影響範囲の回帰テストを計画・実行
-- CLAUDE.md を修正したら → /clear復帰テストを実施
+- AGENTS.md を修正したら → /clear復帰テストを実施
 - shutsujin_departure.sh を修正したら → 起動テストを実施
 
 ### 品質保証

@@ -5,7 +5,7 @@
 # 使用方法:
 #   ./shutsujin_departure.sh           # 全エージェント起動（前回の状態を維持）
 #   ./shutsujin_departure.sh -c        # キューをリセットして起動（クリーンスタート）
-#   ./shutsujin_departure.sh -s        # セットアップのみ（Claude起動なし）
+#   ./shutsujin_departure.sh -s        # セットアップのみ（Codex起動なし）
 #   ./shutsujin_departure.sh -h        # ヘルプ表示
 
 set -e
@@ -114,9 +114,9 @@ while [[ $# -gt 0 ]]; do
             echo "オプション:"
             echo "  -c, --clean         キューとダッシュボードをリセットして起動（クリーンスタート）"
             echo "                      未指定時は前回の状態を維持して起動"
-            echo "  -k, --kessen        決戦の陣（全足軽をOpus Thinkingで起動）"
-            echo "                      未指定時は平時の陣（足軽1-4=Sonnet, 足軽5-8=Opus）"
-            echo "  -s, --setup-only    tmuxセッションのセットアップのみ（Claude起動なし）"
+            echo "  -k, --kessen        決戦の陣（全足軽をfull-autoで起動）"
+            echo "                      未指定時は平時の陣（家老/足軽=auto-edit）"
+            echo "  -s, --setup-only    tmuxセッションのセットアップのみ（Codex起動なし）"
             echo "  -t, --terminal      Windows Terminal で新しいタブを開く"
             echo "  -shell, --shell SH  シェルを指定（bash または zsh）"
             echo "                      未指定時は config/settings.yaml の設定を使用"
@@ -125,22 +125,21 @@ while [[ $# -gt 0 ]]; do
             echo "例:"
             echo "  ./shutsujin_departure.sh              # 前回の状態を維持して出陣"
             echo "  ./shutsujin_departure.sh -c           # クリーンスタート（キューリセット）"
-            echo "  ./shutsujin_departure.sh -s           # セットアップのみ（手動でClaude起動）"
+            echo "  ./shutsujin_departure.sh -s           # セットアップのみ（手動でCodex起動）"
             echo "  ./shutsujin_departure.sh -t           # 全エージェント起動 + ターミナルタブ展開"
             echo "  ./shutsujin_departure.sh -shell bash  # bash用プロンプトで起動"
-            echo "  ./shutsujin_departure.sh -k           # 決戦の陣（全足軽Opus Thinking）"
+            echo "  ./shutsujin_departure.sh -k           # 決戦の陣（全足軽full-auto）"
             echo "  ./shutsujin_departure.sh -c -k         # クリーンスタート＋決戦の陣"
             echo "  ./shutsujin_departure.sh -shell zsh   # zsh用プロンプトで起動"
             echo ""
-            echo "モデル構成:"
-            echo "  将軍:      Opus（thinking無効）"
-            echo "  家老:      Opus Thinking"
-            echo "  足軽1-4:   Sonnet Thinking"
-            echo "  足軽5-8:   Opus Thinking"
+            echo "承認モード構成:"
+            echo "  将軍:      suggest（最小権限）"
+            echo "  家老:      auto-edit（デフォルト）"
+            echo "  足軽1-8:   auto-edit（デフォルト）"
             echo ""
             echo "陣形:"
-            echo "  平時の陣（デフォルト）: 足軽1-4=Sonnet Thinking, 足軽5-8=Opus Thinking"
-            echo "  決戦の陣（--kessen）:   全足軽=Opus Thinking"
+            echo "  平時の陣（デフォルト）: 家老/足軽=auto-edit"
+            echo "  決戦の陣（--kessen）:   家老/足軽=full-auto"
             echo ""
             echo "エイリアス:"
             echo "  csst  → cd /mnt/c/tools/multi-agent-shogun && ./shutsujin_departure.sh"
@@ -506,22 +505,22 @@ tmux split-window -v
 
 # ペインラベル設定（プロンプト用: モデル名なし）
 PANE_LABELS=("karo" "ashigaru1" "ashigaru2" "ashigaru3" "ashigaru4" "ashigaru5" "ashigaru6" "ashigaru7" "ashigaru8")
-# ペインタイトル設定（tmuxタイトル用: モデル名付き）
+# ペインタイトル設定（tmuxタイトル用: 承認モード付き）
 if [ "$KESSEN_MODE" = true ]; then
-    PANE_TITLES=("karo(Opus)" "ashigaru1(Opus)" "ashigaru2(Opus)" "ashigaru3(Opus)" "ashigaru4(Opus)" "ashigaru5(Opus)" "ashigaru6(Opus)" "ashigaru7(Opus)" "ashigaru8(Opus)")
+    PANE_TITLES=("karo(full-auto)" "ashigaru1(full-auto)" "ashigaru2(full-auto)" "ashigaru3(full-auto)" "ashigaru4(full-auto)" "ashigaru5(full-auto)" "ashigaru6(full-auto)" "ashigaru7(full-auto)" "ashigaru8(full-auto)")
 else
-    PANE_TITLES=("karo(Opus)" "ashigaru1(Sonnet)" "ashigaru2(Sonnet)" "ashigaru3(Sonnet)" "ashigaru4(Sonnet)" "ashigaru5(Opus)" "ashigaru6(Opus)" "ashigaru7(Opus)" "ashigaru8(Opus)")
+    PANE_TITLES=("karo(auto-edit)" "ashigaru1(auto-edit)" "ashigaru2(auto-edit)" "ashigaru3(auto-edit)" "ashigaru4(auto-edit)" "ashigaru5(auto-edit)" "ashigaru6(auto-edit)" "ashigaru7(auto-edit)" "ashigaru8(auto-edit)")
 fi
 # 色設定（karo: 赤, ashigaru: 青）
 PANE_COLORS=("red" "blue" "blue" "blue" "blue" "blue" "blue" "blue" "blue")
 
 AGENT_IDS=("karo" "ashigaru1" "ashigaru2" "ashigaru3" "ashigaru4" "ashigaru5" "ashigaru6" "ashigaru7" "ashigaru8")
 
-# モデル名設定（pane-border-format で常時表示するため）
+# 承認モード名設定（pane-border-format で常時表示するため）
 if [ "$KESSEN_MODE" = true ]; then
-    MODEL_NAMES=("Opus Thinking" "Opus Thinking" "Opus Thinking" "Opus Thinking" "Opus Thinking" "Opus Thinking" "Opus Thinking" "Opus Thinking" "Opus Thinking")
+    MODEL_NAMES=("Full-auto" "Full-auto" "Full-auto" "Full-auto" "Full-auto" "Full-auto" "Full-auto" "Full-auto" "Full-auto")
 else
-    MODEL_NAMES=("Opus Thinking" "Sonnet Thinking" "Sonnet Thinking" "Sonnet Thinking" "Sonnet Thinking" "Opus Thinking" "Opus Thinking" "Opus Thinking" "Opus Thinking")
+    MODEL_NAMES=("Auto-edit" "Auto-edit" "Auto-edit" "Auto-edit" "Auto-edit" "Auto-edit" "Auto-edit" "Auto-edit" "Auto-edit")
 fi
 
 for i in {0..8}; do
@@ -533,7 +532,7 @@ for i in {0..8}; do
     tmux send-keys -t "multiagent:agents.${p}" "cd \"$(pwd)\" && export PS1='${PROMPT_STR}' && clear" Enter
 done
 
-# pane-border-format でモデル名を常時表示（Claude Codeがペインタイトルを上書きしても消えない）
+# pane-border-format で承認モードを常時表示（Codexがペインタイトルを上書きしても消えない）
 tmux set-option -t multiagent -w pane-border-status top
 tmux set-option -t multiagent -w pane-border-format '#{pane_index} #{@agent_id} (#{?#{==:#{@model_name},},unknown,#{@model_name}})'
 
@@ -541,60 +540,75 @@ log_success "  └─ 家老・足軽の陣、構築完了"
 echo ""
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# STEP 6: Claude Code 起動（-s / --setup-only のときはスキップ）
+# STEP 6: Codex CLI 起動（-s / --setup-only のときはスキップ）
 # ═══════════════════════════════════════════════════════════════════════════════
 if [ "$SETUP_ONLY" = false ]; then
-    # Claude Code CLI の存在チェック
-    if ! command -v claude &> /dev/null; then
-        log_info "⚠️  claude コマンドが見つかりません"
+    # Codex CLI の存在チェック
+    if ! command -v codex &> /dev/null; then
+        log_info "⚠️  codex コマンドが見つかりません"
         echo "  first_setup.sh を再実行してください:"
         echo "    ./first_setup.sh"
         exit 1
     fi
 
-    log_war "👑 全軍に Claude Code を召喚中..."
+    SHOGUN_MODEL="gpt-5.1-codex-mini"
+    KARO_MODEL="gpt-5.2-codex"
+    ASHIGARU_LIGHT_MODEL="gpt-5.1-codex-mini"
+    ASHIGARU_HEAVY_MODEL="gpt-5.2-codex"
+
+    SHOGUN_CODEX_ARGS="--suggest --model ${SHOGUN_MODEL}"
+    KARO_CODEX_ARGS="--auto-edit --model ${KARO_MODEL}"
+    ASHIGARU_LIGHT_ARGS="--auto-edit --model ${ASHIGARU_LIGHT_MODEL}"
+    ASHIGARU_HEAVY_ARGS="--auto-edit --model ${ASHIGARU_HEAVY_MODEL}"
+    if [ "$KESSEN_MODE" = true ]; then
+        KARO_CODEX_ARGS="--full-auto --model ${KARO_MODEL}"
+        ASHIGARU_LIGHT_ARGS="--full-auto --model ${ASHIGARU_HEAVY_MODEL}"
+        ASHIGARU_HEAVY_ARGS="--full-auto --model ${ASHIGARU_HEAVY_MODEL}"
+    fi
+
+    log_war "👑 全軍に Codex を召喚中..."
 
     # 将軍
-    tmux send-keys -t shogun:main "MAX_THINKING_TOKENS=0 claude --model opus --dangerously-skip-permissions"
+    tmux send-keys -t shogun:main "codex ${SHOGUN_CODEX_ARGS}"
     tmux send-keys -t shogun:main Enter
     log_info "  └─ 将軍、召喚完了"
 
     # 少し待機（安定のため）
     sleep 1
 
-    # 家老（pane 0）: Opus Thinking
+    # 家老（pane 0）
     p=$((PANE_BASE + 0))
-    tmux send-keys -t "multiagent:agents.${p}" "claude --model opus --dangerously-skip-permissions"
+    tmux send-keys -t "multiagent:agents.${p}" "codex ${KARO_CODEX_ARGS}"
     tmux send-keys -t "multiagent:agents.${p}" Enter
-    log_info "  └─ 家老（Opus Thinking）、召喚完了"
+    log_info "  └─ 家老、召喚完了"
 
     if [ "$KESSEN_MODE" = true ]; then
-        # 決戦の陣: 全足軽 Opus Thinking
+        # 決戦の陣: 全足軽 full-auto（高性能モデル）
         for i in {1..8}; do
             p=$((PANE_BASE + i))
-            tmux send-keys -t "multiagent:agents.${p}" "claude --model opus --dangerously-skip-permissions"
+            tmux send-keys -t "multiagent:agents.${p}" "codex ${ASHIGARU_HEAVY_ARGS}"
             tmux send-keys -t "multiagent:agents.${p}" Enter
         done
-        log_info "  └─ 足軽1-8（Opus Thinking）、決戦の陣で召喚完了"
+        log_info "  └─ 足軽1-8、決戦の陣で召喚完了"
     else
-        # 平時の陣: 足軽1-4=Sonnet, 足軽5-8=Opus
+        # 平時の陣: 足軽1-4=軽量, 足軽5-8=高性能
         for i in {1..4}; do
             p=$((PANE_BASE + i))
-            tmux send-keys -t "multiagent:agents.${p}" "claude --model sonnet --dangerously-skip-permissions"
+            tmux send-keys -t "multiagent:agents.${p}" "codex ${ASHIGARU_LIGHT_ARGS}"
             tmux send-keys -t "multiagent:agents.${p}" Enter
         done
-        log_info "  └─ 足軽1-4（Sonnet Thinking）、召喚完了"
+        log_info "  └─ 足軽1-4、召喚完了"
 
         for i in {5..8}; do
             p=$((PANE_BASE + i))
-            tmux send-keys -t "multiagent:agents.${p}" "claude --model opus --dangerously-skip-permissions"
+            tmux send-keys -t "multiagent:agents.${p}" "codex ${ASHIGARU_HEAVY_ARGS}"
             tmux send-keys -t "multiagent:agents.${p}" Enter
         done
-        log_info "  └─ 足軽5-8（Opus Thinking）、召喚完了"
+        log_info "  └─ 足軽5-8、召喚完了"
     fi
 
     if [ "$KESSEN_MODE" = true ]; then
-        log_success "✅ 決戦の陣で出陣！全軍Opus！"
+        log_success "✅ 決戦の陣で出陣！全軍full-auto！"
     else
         log_success "✅ 平時の陣で出陣"
     fi
@@ -671,16 +685,9 @@ NINJA_EOF
     echo -e "                               \033[0;36m[ASCII Art: syntax-samurai/ryu - CC0 1.0 Public Domain]\033[0m"
     echo ""
 
-    echo "  Claude Code の起動を待機中（最大30秒）..."
-
-    # 将軍の起動を確認（最大30秒待機）
-    for i in {1..30}; do
-        if tmux capture-pane -t shogun:main -p | grep -q "bypass permissions"; then
-            echo "  └─ 将軍の Claude Code 起動確認完了（${i}秒）"
-            break
-        fi
-        sleep 1
-    done
+    echo "  Codex の起動を待機中（3秒）..."
+    sleep 3
+    echo "  └─ 将軍の Codex 起動待機完了"
 
     # 将軍に指示書を読み込ませる
     log_info "  └─ 将軍に指示書を伝達中..."
@@ -749,18 +756,27 @@ echo "  ╚═══════════════════════
 echo ""
 
 if [ "$SETUP_ONLY" = true ]; then
-    echo "  ⚠️  セットアップのみモード: Claude Codeは未起動です"
+    echo "  ⚠️  セットアップのみモード: Codexは未起動です"
     echo ""
-    echo "  手動でClaude Codeを起動するには:"
+    echo "  手動でCodexを起動するには:"
     echo "  ┌──────────────────────────────────────────────────────────┐"
     echo "  │  # 将軍を召喚                                            │"
     echo "  │  tmux send-keys -t shogun:main \\                         │"
-    echo "  │    'claude --dangerously-skip-permissions' Enter         │"
+    echo "  │    'codex --suggest --model gpt-5.1-codex-mini' Enter    │"
     echo "  │                                                          │"
     echo "  │  # 家老・足軽を一斉召喚                                  │"
-    echo "  │  for p in \$(seq $PANE_BASE $((PANE_BASE+8))); do                                 │"
+    echo "  │  # 足軽1-4（軽量）                                       │"
+    echo "  │  for p in \$(seq $((PANE_BASE+1)) $((PANE_BASE+4))); do                         │"
     echo "  │      tmux send-keys -t multiagent:agents.\$p \\            │"
-    echo "  │      'claude --dangerously-skip-permissions' Enter       │"
+    echo "  │      'codex --auto-edit --model gpt-5.1-codex-mini' Enter│"
+    echo "  │  done                                                    │"
+    echo "  │                                                          │"
+    echo "  │  # 家老＋足軽5-8（高性能）                               │"
+    echo "  │  tmux send-keys -t multiagent:agents.$PANE_BASE \\         │"
+    echo "  │    'codex --auto-edit --model gpt-5.2-codex' Enter        │"
+    echo "  │  for p in \$(seq $((PANE_BASE+5)) $((PANE_BASE+8))); do                         │"
+    echo "  │      tmux send-keys -t multiagent:agents.\$p \\            │"
+    echo "  │      'codex --auto-edit --model gpt-5.2-codex' Enter      │"
     echo "  │  done                                                    │"
     echo "  └──────────────────────────────────────────────────────────┘"
     echo ""
